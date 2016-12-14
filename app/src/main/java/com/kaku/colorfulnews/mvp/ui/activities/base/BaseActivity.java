@@ -40,6 +40,7 @@ import android.widget.Toast;
 
 import com.kaku.colorfulnews.App;
 import com.kaku.colorfulnews.R;
+import com.kaku.colorfulnews.annotation.BindValues;
 import com.kaku.colorfulnews.di.component.ActivityComponent;
 import com.kaku.colorfulnews.di.component.DaggerActivityComponent;
 import com.kaku.colorfulnews.di.module.ActivityModule;
@@ -64,6 +65,7 @@ import rx.Subscription;
  */
 public abstract class BaseActivity<T extends BasePresenter> extends AppCompatActivity {
     protected ActivityComponent mActivityComponent;
+    private boolean mIsChangeTheme;
 
     public ActivityComponent getActivityComponent() {
         return mActivityComponent;
@@ -90,6 +92,7 @@ public abstract class BaseActivity<T extends BasePresenter> extends AppCompatAct
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         KLog.i(getClass().getSimpleName());
+        initAnnotation();
         NetUtil.isNetworkErrThenShowMsg();
         initActivityComponent();
         setStatusBarTranslucent();
@@ -109,6 +112,13 @@ public abstract class BaseActivity<T extends BasePresenter> extends AppCompatAct
         }
 
         initNightModeSwitch();
+    }
+
+    private void initAnnotation() {
+        if (getClass().isAnnotationPresent(BindValues.class)) {
+            BindValues annotation = getClass().getAnnotation(BindValues.class);
+            mIsHasNavigationView = annotation.mIsHasNavigationView();
+        }
     }
 
     private void initNightModeSwitch() {
@@ -140,7 +150,9 @@ public abstract class BaseActivity<T extends BasePresenter> extends AppCompatAct
                     changeToDay();
                     MyUtils.saveTheme(false);
                 }
-                recreate();
+
+                mIsChangeTheme = true;
+                mDrawerLayout.closeDrawer(GravityCompat.START);
             }
         });
     }
@@ -204,6 +216,12 @@ public abstract class BaseActivity<T extends BasePresenter> extends AppCompatAct
                     overridePendingTransition(0, 0);
                     mClass = null;
                 }
+
+                if (mIsChangeTheme) {
+                    mIsChangeTheme = false;
+                    getWindow().setWindowAnimations(R.style.WindowAnimationFadeInOut);
+                    recreate();
+                }
             }
         });
     }
@@ -231,7 +249,7 @@ public abstract class BaseActivity<T extends BasePresenter> extends AppCompatAct
     // TODO:适配4.4
     @TargetApi(Build.VERSION_CODES.KITKAT)
     protected void setStatusBarTranslucent() {
-        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT&&
+        if ((Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT &&
                 !(this instanceof NewsDetailActivity || this instanceof PhotoActivity
                         || this instanceof PhotoDetailActivity))
                 || (Build.VERSION.SDK_INT == Build.VERSION_CODES.KITKAT
